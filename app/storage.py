@@ -44,22 +44,40 @@ def cleanup_old_bookings():
     keys_to_remove = []
     
     for order_id, booking_info in round_trip_bookings.items():
-        if current_time - booking_info.get("first_received_at", current_time) > timedelta(hours=ROUND_TRIP_CLEANUP_HOURS):
-            keys_to_remove.append(order_id)
-    
+        first_received_at_str = booking_info.get("first_received_at")
+        if first_received_at_str:
+            # Parse ISO string back to datetime for comparison
+            if isinstance(first_received_at_str, str):
+                first_received_at = datetime.fromisoformat(
+                    first_received_at_str
+                )
+            else:
+                # Backward compatibility: handle datetime objects
+                first_received_at = first_received_at_str
+
+            if (current_time - first_received_at >
+                    timedelta(hours=ROUND_TRIP_CLEANUP_HOURS)):
+                keys_to_remove.append(order_id)
+
     for key in keys_to_remove:
         del round_trip_bookings[key]
-        log_info(f"Removed old round trip booking for order {key}", {"order_id": key})
+        log_info(
+            f"Removed old round trip booking for order {key}",
+            {"order_id": key}
+        )
 
 
-def store_round_trip_booking(order_id: str, booking_data: Dict[str, Any], flights: list):
+def store_round_trip_booking(
+    order_id: str, booking_data: Dict[str, Any], flights: list
+):
     """
     Store a round trip booking for later combination
     """
     round_trip_bookings[order_id] = {
         "booking_data": booking_data,
         "flights": flights,
-        "first_received_at": datetime.now()
+        # Store as ISO string for JSON serialization
+        "first_received_at": datetime.now().isoformat()
     }
 
 
@@ -83,4 +101,3 @@ def has_round_trip_booking(order_id: str) -> bool:
     Check if a round trip booking exists for the given order ID
     """
     return order_id in round_trip_bookings
-
