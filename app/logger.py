@@ -2,10 +2,29 @@
 JSON file logging utility
 """
 import json
-import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+
+def convert_datetime_to_iso(obj: Any) -> Any:
+    """
+    Recursively convert datetime objects to ISO format strings
+    """
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {
+            key: convert_datetime_to_iso(value)
+            for key, value in obj.items()
+        }
+    elif isinstance(obj, list):
+        return [convert_datetime_to_iso(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_datetime_to_iso(item) for item in obj)
+    else:
+        return obj
+
 
 # Default log file path
 LOG_DIR = Path("logs")
@@ -43,7 +62,8 @@ def log_to_json(
     }
     
     if context:
-        log_entry["context"] = context
+        # Convert datetime objects to ISO strings for JSON serialization
+        log_entry["context"] = convert_datetime_to_iso(context)
     
     if error:
         log_entry["error"] = error
@@ -51,7 +71,7 @@ def log_to_json(
     # Print full log entry to console
     print(f"\n[{timestamp}] [{level}] {message}")
     if context:
-        print(f"Context: {json.dumps(context, indent=2, ensure_ascii=False)}")
+        print(f"Context: {json.dumps(log_entry.get('context', context), indent=2, ensure_ascii=False)}")
     if error:
         print(f"Error: {error}")
     
@@ -130,11 +150,14 @@ def save_webhook_request_body(webhook_data: Dict[str, Any], client_ip: Optional[
         "webhook_data": webhook_data
     }
     
+    # Convert datetime objects to ISO strings for JSON serialization
+    webhook_entry["webhook_data"] = convert_datetime_to_iso(webhook_data)
+    
     # Print webhook entry to console
     print(f"\n[WEBHOOK REQUEST BODY] [{timestamp}]")
     print(f"Client IP: {client_ip}")
     print(f"URL: {url}")
-    print(f"Webhook Data: {json.dumps(webhook_data, indent=2, ensure_ascii=False)}")
+    print(f"Webhook Data: {json.dumps(webhook_entry['webhook_data'], indent=2, ensure_ascii=False)}")
     
     # Append to JSON file (one JSON object per line - JSONL format)
     try:

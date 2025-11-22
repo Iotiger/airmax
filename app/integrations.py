@@ -380,7 +380,9 @@ def _log_webhook_request(request: Request, webhook_data: Dict[str, Any]):
     for key, value in request.headers.items():
         print(f"   {key}: {value}")
     print("Request Body:")
-    print(json.dumps(webhook_data, indent=2))
+    # Import helper function to convert datetime objects
+    from app.logger import convert_datetime_to_iso
+    print(json.dumps(convert_datetime_to_iso(webhook_data), indent=2))
     print("="*80)
     print()
     
