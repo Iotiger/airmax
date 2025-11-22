@@ -1,0 +1,7 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+requests==2.31.0
+cryptography==46.0.3
+httpx==0.25.2
+country-converter==0.7.2
