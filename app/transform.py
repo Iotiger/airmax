@@ -28,8 +28,8 @@ def transform_booking_data(booking_data: Dict[str, Any], depart_flights: List[in
         
         # Build the final payload
         transformed_data = {
-            "DepartFlights": depart_flights,
-            "ReturnFlights": return_flights,
+            "DepartFlights": return_flights,
+            "ReturnFlights": depart_flights,
             "Passengers": passengers,
             "IsDepartFirstClass": False,
             "IsReturnFirstClass": False
