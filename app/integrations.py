@@ -142,75 +142,78 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
             
             existing_booking = existing_booking_info["booking_data"]
             
-            # Get flight identifiers from API for both bookings
-            existing_flights = await get_flight_identifiers_from_api(
-                existing_booking
-            )
-            current_flights = await get_flight_identifiers_from_api(
-                booking_data
-            )
-            
-            # Determine which is depart and which is return
-            depart_flights, return_flights = determine_flight_directions(
-                existing_flights, current_flights,
-                existing_booking, booking_data
-            )
-            
-            # Use the first booking's passenger data (they should be same)
-            combined_booking_data = existing_booking
-            
-            # Transform the combined booking data
-            transformed_data = transform_booking_data(
-                combined_booking_data, depart_flights, return_flights
-            )
-            log_info("Round trip data transformation completed", {
-                "order_id": order_id,
-                "depart_flights": depart_flights,
-                "return_flights": return_flights,
-                "transformed_data": transformed_data
-            })
-            
-            # Clean up the stored booking (while holding lock)
-            remove_round_trip_booking(order_id)
-            
-            # Release lock before API call (lock released when exiting async with)
-            # Send to MakerSuite API
-            log_info(
-                "Sending round trip booking to MakerSuite API",
-                {"order_id": order_id}
-            )
-            api_result = await send_to_makersuite_api(transformed_data)
-            
-            if api_result["success"]:
-                log_info(
-                    "Round trip booking successfully sent to MakerSuite API",
-                    {
-                        "order_id": order_id,
-                        "response": api_result.get("response")
-                    }
+            # Process round trip booking - ensure cleanup happens in all cases
+            try:
+                # Get flight identifiers from API for both bookings
+                existing_flights = await get_flight_identifiers_from_api(
+                    existing_booking
                 )
-                return {
-                    "message": (
-                        "Round trip booking processed and sent to "
-                        "MakerSuite successfully!"
-                    ),
-                    "timestamp": datetime.now().isoformat(),
-                    "makersuite_response": api_result["response"]
-                }
-            else:
-                log_error(
-                    "Failed to send round trip booking to MakerSuite API",
-                    api_result.get("error"),
+                current_flights = await get_flight_identifiers_from_api(
+                    booking_data
+                )
+                
+                # Determine which is depart and which is return
+                depart_flights, return_flights = determine_flight_directions(
+                    existing_flights, current_flights,
+                    existing_booking, booking_data
+                )
+                
+                # Use the first booking's passenger data (they should be same)
+                combined_booking_data = existing_booking
+                
+                # Transform the combined booking data
+                transformed_data = transform_booking_data(
+                    combined_booking_data, depart_flights, return_flights
+                )
+                log_info("Round trip data transformation completed", {
+                    "order_id": order_id,
+                    "depart_flights": depart_flights,
+                    "return_flights": return_flights,
+                    "transformed_data": transformed_data
+                })
+                
+                # Release lock before API call (lock released when exiting async with)
+                # Send to MakerSuite API
+                log_info(
+                    "Sending round trip booking to MakerSuite API",
                     {"order_id": order_id}
                 )
-                return {
-                    "message": (
-                        "Round trip booking received but failed to send "
-                        "to MakerSuite"
-                    ),
-                    "timestamp": datetime.now().isoformat(),
-                    "error": api_result["error"]
-                }
+                api_result = await send_to_makersuite_api(transformed_data)
+                
+                if api_result["success"]:
+                    log_info(
+                        "Round trip booking successfully sent to MakerSuite API",
+                        {
+                            "order_id": order_id,
+                            "response": api_result.get("response")
+                        }
+                    )
+                    return {
+                        "message": (
+                            "Round trip booking processed and sent to "
+                            "MakerSuite successfully!"
+                        ),
+                        "timestamp": datetime.now().isoformat(),
+                        "makersuite_response": api_result["response"]
+                    }
+                else:
+                    log_error(
+                        "Failed to send round trip booking to MakerSuite API",
+                        api_result.get("error"),
+                        {"order_id": order_id}
+                    )
+                    return {
+                        "message": (
+                            "Round trip booking received but failed to send "
+                            "to MakerSuite"
+                        ),
+                        "timestamp": datetime.now().isoformat(),
+                        "error": api_result["error"]
+                    }
+            finally:
+                # Always clean up the stored booking after processing (while holding lock)
+                remove_round_trip_booking(order_id)
+                log_debug("Cleaned up storage for round trip booking", {"order_id": order_id})
         else:
             log_debug("No existing booking found, will store as first booking", {
                 "order_id": order_id,
@@ -230,77 +233,80 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                 if existing_booking_info:
                     existing_booking = existing_booking_info["booking_data"]
                     
-                    # Get flight identifiers from API for both bookings
-                    existing_flights = await get_flight_identifiers_from_api(existing_booking)
-                    current_flights = await get_flight_identifiers_from_api(booking_data)
-                    
-                    # Determine which is depart and which is return
-                    depart_flights, return_flights = determine_flight_directions(
-                        existing_flights, current_flights, existing_booking, booking_data
-                    )
-                    
-                    # Use the first booking's passenger data
-                    combined_booking_data = existing_booking
-                    
-                    # Transform the combined booking data
-                    transformed_data = transform_booking_data(combined_booking_data, depart_flights, return_flights)
-                    log_info("Round trip data transformation completed", {
-                        "order_id": order_id,
-                        "depart_flights": depart_flights,
-                        "return_flights": return_flights,
-                        "transformed_data": transformed_data
-                    })
-                    
-                    # Clean up the stored booking (while holding lock)
-                    remove_round_trip_booking(order_id)
-                    
-                    # Prepare data for API call (still holding lock)
-                    # We'll release lock before making the API call
-                    
-                    # Release lock before API call (which may take time)
-                    # Lock is automatically released when exiting async with
-                    
-                    # Send to MakerSuite API
-                    log_info(
-                        "Sending round trip booking to MakerSuite API",
-                        {"order_id": order_id}
-                    )
-                    api_result = await send_to_makersuite_api(
-                        transformed_data
-                    )
-                    
-                    if api_result["success"]:
-                        log_info(
-                            "Round trip booking successfully sent to "
-                            "MakerSuite API",
-                            {
-                                "order_id": order_id,
-                                "response": api_result.get("response")
-                            }
+                    # Process round trip booking - ensure cleanup happens in all cases
+                    try:
+                        # Get flight identifiers from API for both bookings
+                        existing_flights = await get_flight_identifiers_from_api(existing_booking)
+                        current_flights = await get_flight_identifiers_from_api(booking_data)
+                        
+                        # Determine which is depart and which is return
+                        depart_flights, return_flights = determine_flight_directions(
+                            existing_flights, current_flights, existing_booking, booking_data
                         )
-                        return {
-                            "message": (
-                                "Round trip booking processed and sent to "
-                                "MakerSuite successfully!"
-                            ),
-                            "timestamp": datetime.now().isoformat(),
-                            "makersuite_response": api_result["response"]
-                        }
-                    else:
-                        log_error(
-                            "Failed to send round trip booking to "
-                            "MakerSuite API",
-                            api_result.get("error"),
+                        
+                        # Use the first booking's passenger data
+                        combined_booking_data = existing_booking
+                        
+                        # Transform the combined booking data
+                        transformed_data = transform_booking_data(combined_booking_data, depart_flights, return_flights)
+                        log_info("Round trip data transformation completed", {
+                            "order_id": order_id,
+                            "depart_flights": depart_flights,
+                            "return_flights": return_flights,
+                            "transformed_data": transformed_data
+                        })
+                        
+                        # Prepare data for API call (still holding lock)
+                        # We'll release lock before making the API call
+                        
+                        # Release lock before API call (which may take time)
+                        # Lock is automatically released when exiting async with
+                        
+                        # Send to MakerSuite API
+                        log_info(
+                            "Sending round trip booking to MakerSuite API",
                             {"order_id": order_id}
                         )
-                        return {
-                            "message": (
-                                "Round trip booking received but failed to "
-                                "send to MakerSuite"
-                            ),
-                            "timestamp": datetime.now().isoformat(),
-                            "error": api_result["error"]
-                        }
+                        api_result = await send_to_makersuite_api(
+                            transformed_data
+                        )
+                        
+                        if api_result["success"]:
+                            log_info(
+                                "Round trip booking successfully sent to "
+                                "MakerSuite API",
+                                {
+                                    "order_id": order_id,
+                                    "response": api_result.get("response")
+                                }
+                            )
+                            return {
+                                "message": (
+                                    "Round trip booking processed and sent to "
+                                    "MakerSuite successfully!"
+                                ),
+                                "timestamp": datetime.now().isoformat(),
+                                "makersuite_response": api_result["response"]
+                            }
+                        else:
+                            log_error(
+                                "Failed to send round trip booking to "
+                                "MakerSuite API",
+                                api_result.get("error"),
+                                {"order_id": order_id}
+                            )
+                            return {
+                                "message": (
+                                    "Round trip booking received but failed to "
+                                    "send to MakerSuite"
+                                ),
+                                "timestamp": datetime.now().isoformat(),
+                                "error": api_result["error"]
+                            }
+                    finally:
+                        # Always clean up the stored booking after processing (while holding lock)
+                        remove_round_trip_booking(order_id)
+                        log_debug("Cleaned up storage for round trip booking", {"order_id": order_id})
             
             log_info(
                 f"First booking for order {order_id}, storing for later",
