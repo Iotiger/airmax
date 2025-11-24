@@ -118,17 +118,17 @@ def determine_flight_directions(existing_flights: List[int], current_flights: Li
                               existing_booking: Dict[str, Any], current_booking: Dict[str, Any]) -> tuple[List[int], List[int]]:
     """
     Determine which flights are depart and which are return based on order
-    First request is depart flight, second request is return flight
+    First request is return flight, second request is depart flight
     """
     # In round trip bookings:
-    # First request (existing_booking) = depart flight
-    # Second request (current_booking) = return flight
+    # First request (existing_booking) = return flight
+    # Second request (current_booking) = depart flight
     
-    log_debug("Determining flight directions: First request (existing) = Depart, Second request (current) = Return")
+    log_debug("Determining flight directions: First request (existing) = Return, Second request (current) = Depart")
     
-    # So existing_flights should be depart_flights, current_flights should be return_flights
-    depart_flights = existing_flights  # First request is depart
-    return_flights = current_flights  # Second request is return
+    # So existing_flights should be return_flights, current_flights should be depart_flights
+    depart_flights = current_flights  # Second request is depart
+    return_flights = existing_flights  # First request is return
     
     return depart_flights, return_flights
 
