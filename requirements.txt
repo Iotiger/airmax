@@ -5,3 +5,4 @@ requests==2.31.0
 cryptography==46.0.3
 httpx==0.25.2
 country-converter==0.7.2
+python-dotenv==1.0.0
