@@ -236,106 +236,8 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                 "storage_size": len(round_trip_bookings)
             })
             
-            # Clean up old bookings before storing new one (only when storing, not when checking)
+            # Clean up old bookings before storing new one
             cleanup_old_bookings()
-            
-            # Double-check after cleanup in case another request stored it concurrently
-            # (with lock, this should not happen, but it's a safety check)
-            if has_round_trip_booking(order_id):
-                log_info(f"Found existing booking for order {order_id} after cleanup check, combining flights", {"order_id": order_id})
-                # Re-check and proceed to combining logic
-                existing_booking_info = get_round_trip_booking(order_id)
-                if existing_booking_info:
-                    existing_booking = existing_booking_info["booking_data"]
-                    
-                    # Process round trip booking - ensure cleanup happens in all cases
-                    try:
-                        # Get flight identifiers from API for both bookings
-                        existing_flights = await get_flight_identifiers_from_api(existing_booking)
-                        current_flights = await get_flight_identifiers_from_api(booking_data)
-                        
-                        # Determine which is depart and which is return
-                        depart_flights, return_flights = determine_flight_directions(
-                            existing_flights, current_flights, existing_booking, booking_data
-                        )
-                        
-                        # Use the first booking's passenger data
-                        combined_booking_data = existing_booking
-                        
-                        # Transform the combined booking data
-                        transformed_data = transform_booking_data(combined_booking_data, depart_flights, return_flights)
-                        log_info("Round trip data transformation completed", {
-                            "order_id": order_id,
-                            "depart_flights": depart_flights,
-                            "return_flights": return_flights,
-                            "transformed_data": transformed_data
-                        })
-                        
-                        # Prepare data for API call (still holding lock)
-                        # We'll release lock before making the API call
-                        
-                        # Release lock before API call (which may take time)
-                        # Lock is automatically released when exiting async with
-                        
-                        # Send to MakerSuite API
-                        log_info(
-                            "Sending round trip booking to MakerSuite API",
-                            {"order_id": order_id}
-                        )
-                        api_result = await send_to_makersuite_api(
-                            transformed_data
-                        )
-                        
-                        if api_result["success"]:
-                            log_info(
-                                "Round trip booking successfully sent to "
-                                "MakerSuite API",
-                                {
-                                    "order_id": order_id,
-                                    "response": api_result.get("response")
-                                }
-                            )
-                            # Send Slack success notification
-                            await notify_booking_success(
-                                booking_data=existing_booking,
-                                airmax_response=api_result.get("response"),
-                                order_id=order_id,
-                                booking_type="round_trip"
-                            )
-                            return {
-                                "message": (
-                                    "Round trip booking processed and sent to "
-                                    "MakerSuite successfully!"
-                                ),
-                                "timestamp": datetime.now().isoformat(),
-                                "makersuite_response": api_result["response"]
-                            }
-                        else:
-                            log_error(
-                                "Failed to send round trip booking to "
-                                "MakerSuite API",
-                                api_result.get("error"),
-                                {"order_id": order_id}
-                            )
-                            # Send Slack error notification
-                            await notify_booking_error(
-                                booking_data=existing_booking,
-                                error=api_result.get("error"),
-                                order_id=order_id,
-                                booking_type="round_trip"
-                            )
-                            return {
-                                "message": (
-                                    "Round trip booking received but failed to "
-                                    "send to MakerSuite"
-                                ),
-                                "timestamp": datetime.now().isoformat(),
-                                "error": api_result["error"]
-                            }
-                    finally:
-                        # Always clean up the stored booking after processing (while holding lock)
-                        remove_round_trip_booking(order_id)
-                        log_debug("Cleaned up storage for round trip booking", {"order_id": order_id})
             
             log_info(
                 f"First booking for order {order_id}, storing for later",
@@ -355,7 +257,10 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
             
             # Send Slack warning notification for first booking waiting
             await notify_booking_warning(
-                message=f"Round trip booking received and stored. Waiting for second booking.",
+                message=(
+                    "Round trip booking received and stored. "
+                    "Waiting for second booking."
+                ),
                 booking_data=booking_data,
                 order_id=order_id,
                 booking_type="round_trip"
@@ -375,6 +280,39 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
     """
     Process a single trip booking (sent immediately)
     """
+    # Create unique identifier for this booking to prevent duplicates
+    from app.storage import (
+        is_single_trip_processed,
+        mark_single_trip_processed
+    )
+
+    booking_pk = booking_data.get("pk")
+    availability = booking_data.get("availability", {})
+    start_at = availability.get("start_at", "")
+    item_pk = availability.get("item", {}).get("pk")
+
+    # Create unique booking identifier
+    booking_id = None
+    if booking_pk:
+        booking_id = f"single_{booking_pk}_{start_at}"
+    elif item_pk and start_at:
+        booking_id = f"single_item_{item_pk}_{start_at}"
+
+    # Check if already processed (idempotency check)
+    if booking_id and is_single_trip_processed(booking_id):
+        log_warning(
+            (
+                f"Single trip booking {booking_id} already processed, "
+                "skipping duplicate"
+            ),
+            {"booking_id": booking_id}
+        )
+        return {
+            "message": "Booking already processed (duplicate request)",
+            "timestamp": datetime.now().isoformat(),
+            "duplicate": True
+        }
+    
     log_info("Processing single trip booking")
     
     # Get flight identifiers from API
@@ -392,6 +330,10 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
     api_result = await send_to_makersuite_api(transformed_data)
     
     if api_result["success"]:
+        # Mark as processed to prevent duplicates
+        if booking_id:
+            mark_single_trip_processed(booking_id)
+        
         log_info("Single trip booking successfully sent to MakerSuite API", {
             "response": api_result.get("response")
         })

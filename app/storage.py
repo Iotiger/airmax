@@ -12,6 +12,10 @@ from app.logger import log_info
 # Key: order_display_id, Value: booking data
 round_trip_bookings: Dict[str, Dict[str, Any]] = {}
 
+# Track processed single trip bookings to prevent duplicates
+# Key: booking identifier (pk + start_at), Value: timestamp
+processed_single_trip_bookings: Dict[str, datetime] = {}
+
 # Locks for each order_id to prevent race conditions
 _order_locks: Dict[str, asyncio.Lock] = {}
 _locks_lock = asyncio.Lock()
@@ -101,3 +105,25 @@ def has_round_trip_booking(order_id: str) -> bool:
     Check if a round trip booking exists for the given order ID
     """
     return order_id in round_trip_bookings
+
+
+def is_single_trip_processed(booking_id: str) -> bool:
+    """
+    Check if a single trip booking has already been processed
+    """
+    return booking_id in processed_single_trip_bookings
+
+
+def mark_single_trip_processed(booking_id: str):
+    """
+    Mark a single trip booking as processed
+    """
+    processed_single_trip_bookings[booking_id] = datetime.now()
+    # Clean up old entries (older than 24 hours)
+    cutoff_time = datetime.now() - timedelta(hours=24)
+    keys_to_remove = [
+        key for key, timestamp in processed_single_trip_bookings.items()
+        if timestamp < cutoff_time
+    ]
+    for key in keys_to_remove:
+        del processed_single_trip_bookings[key]
