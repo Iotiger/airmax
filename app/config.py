@@ -13,3 +13,6 @@ AIRMAX_FLIGHT_SEARCH_ENDPOINT = "/api/FlightSearch/GetOneWayFlightsForDateRange"
 # Round trip booking storage configuration
 ROUND_TRIP_CLEANUP_HOURS = 1  # Clean up bookings older than 1 hour
 
+# Slack notification configuration
+SLACK_WEBHOOK_URL = "SLACK_WEBHOOK_URL"
+

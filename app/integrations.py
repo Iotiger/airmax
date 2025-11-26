@@ -27,6 +27,7 @@ from app.logger import (
     log_info, log_error, log_warning, log_debug, log_webhook_request,
     save_webhook_request_body
 )
+from app.slack_notifier import notify_booking_success, notify_booking_error, notify_booking_warning
 
 router = APIRouter()
 
@@ -188,6 +189,13 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                             "response": api_result.get("response")
                         }
                     )
+                    # Send Slack success notification
+                    await notify_booking_success(
+                        booking_data=combined_booking_data,
+                        airmax_response=api_result.get("response"),
+                        order_id=order_id,
+                        booking_type="round_trip"
+                    )
                     return {
                         "message": (
                             "Round trip booking processed and sent to "
@@ -202,10 +210,17 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                         api_result.get("error"),
                         {"order_id": order_id}
                     )
+                    # Send Slack error notification
+                    await notify_booking_error(
+                        booking_data=combined_booking_data,
+                        error=api_result.get("error"),
+                        order_id=order_id,
+                        booking_type="round_trip"
+                    )
                     return {
                         "message": (
                             "Round trip booking received but failed to send "
-                            "to MakerSuite"
+                            "to MakerSuite"  
                         ),
                         "timestamp": datetime.now().isoformat(),
                         "error": api_result["error"]
@@ -280,6 +295,13 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                                     "response": api_result.get("response")
                                 }
                             )
+                            # Send Slack success notification
+                            await notify_booking_success(
+                                booking_data=existing_booking,
+                                airmax_response=api_result.get("response"),
+                                order_id=order_id,
+                                booking_type="round_trip"
+                            )
                             return {
                                 "message": (
                                     "Round trip booking processed and sent to "
@@ -294,6 +316,13 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                                 "MakerSuite API",
                                 api_result.get("error"),
                                 {"order_id": order_id}
+                            )
+                            # Send Slack error notification
+                            await notify_booking_error(
+                                booking_data=existing_booking,
+                                error=api_result.get("error"),
+                                order_id=order_id,
+                                booking_type="round_trip"
                             )
                             return {
                                 "message": (
@@ -323,6 +352,14 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                 "storage_size": len(round_trip_bookings),
                 "stored_flights": flights
             })
+            
+            # Send Slack warning notification for first booking waiting
+            await notify_booking_warning(
+                message=f"Round trip booking received and stored. Waiting for second booking.",
+                booking_data=booking_data,
+                order_id=order_id,
+                booking_type="round_trip"
+            )
             
             # Lock is automatically released when exiting async with block
             return {
@@ -358,6 +395,12 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
         log_info("Single trip booking successfully sent to MakerSuite API", {
             "response": api_result.get("response")
         })
+        # Send Slack success notification
+        await notify_booking_success(
+            booking_data=booking_data,
+            airmax_response=api_result.get("response"),
+            booking_type="single_trip"
+        )
         return {
             "message": "Single trip booking processed and sent to MakerSuite successfully!", 
             "timestamp": datetime.now().isoformat(),
@@ -365,6 +408,12 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
         }
     else:
         log_error("Failed to send single trip booking to MakerSuite API", api_result.get("error"))
+        # Send Slack error notification
+        await notify_booking_error(
+            booking_data=booking_data,
+            error=api_result.get("error"),
+            booking_type="single_trip"
+        )
         return {
             "message": "Single trip booking received but failed to send to MakerSuite", 
             "timestamp": datetime.now().isoformat(),
