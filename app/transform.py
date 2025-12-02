@@ -91,7 +91,7 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         passenger["LastName"] = custom_fields.get("Passenger Last Name", "")
         
         # Convert date format from MM/DD/YYYY to YYYY-MM-DD
-        passenger["DateOfBirth"] = _convert_date_format(custom_fields.get("Date of Birth", ""))
+        passenger["DateOfBirth"] = _convert_date_format(custom_fields.get("Date of Birth - Year", ""), custom_fields.get("Date of Birth - Month", ""), custom_fields.get("Date of Birth - Day", ""))
         
         # Map gender
         gender_display = custom_fields.get("Passenger Sex", "")
@@ -104,7 +104,7 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         # Document information
         passenger["DocumentNumber"] = custom_fields.get("Passport Number", "")
         passenger["DocumentType"] = "P"  # P for Passport
-        passenger["DocumentExpiry"] = _convert_date_format(custom_fields.get("Passport Expiration Date", ""))
+        passenger["DocumentExpiry"] = _convert_date_format(custom_fields.get("Passport Expiration Date - Year", ""), custom_fields.get("Passport Expiration Date - Month", ""), custom_fields.get("Passport Expiration Date - Day", ""))
         
         # Convert country name to ISO3 code
         citizenship = custom_fields.get("Citizenship", "")
@@ -125,16 +125,17 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
     return passengers
 
 
-def _convert_date_format(date_str: str) -> str:
+def _convert_date_format(year: str, month: str, day: str) -> str:
     """
-    Convert date format from MM/DD/YYYY to YYYY-MM-DD
+    Convert date format to YYYY-MM-DD
     """
-    if not date_str:
+    if not year or not month or not day:
         return ""
     
     try:
-        dob_date = datetime.strptime(date_str, "%m/%d/%Y")
-        return dob_date.strftime("%Y-%m-%d")
-    except:
-        return date_str
+        d = datetime(int(year), int(month), int(day))
+        return d.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"Error converting date format: {str(e)}")
+        return ""
 
