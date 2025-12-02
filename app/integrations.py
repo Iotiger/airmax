@@ -70,14 +70,14 @@ async def receive_booking_webhook(request: Request):
                 return await _process_single_trip_booking(booking_data)
                 
         except Exception as e:
-            log_error("Error processing booking", str(e), {"webhook_data": webhook_data})
+            log_error("Error processing booking", str(e), {"webhook_data": ""})
             return {
                 "message": "Booking received but processing failed", 
                 "timestamp": datetime.now().isoformat(),
                 "error": str(e)
             }
     else:
-        log_warning("No booking data found in webhook", {"webhook_data": webhook_data})
+        log_warning("No booking data found in webhook", {"webhook_data": ""})
         return {"message": "Webhook received but no booking data found", "timestamp": datetime.now().isoformat()}
 
 
@@ -88,7 +88,7 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
     order_id = get_order_display_id(booking_data)
     
     if not order_id:
-        log_error("Round trip booking missing order_id", None, {"booking_data": booking_data})
+        log_error("Round trip booking missing order_id", None, {"booking_data": ""})
         return {
             "message": "Error: Round trip booking missing order_id",
             "timestamp": datetime.now().isoformat(),
