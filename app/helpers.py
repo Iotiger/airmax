@@ -140,6 +140,10 @@ def get_country_iso3(country_name: str) -> str:
     if not country_name:
         return ""
     
+    # If already an ISO3 code (3 uppercase letters), return as-is
+    if len(country_name) == 3 and country_name.isupper() and country_name.isalpha():
+        return country_name
+    
     try:
         # Try to convert country name to ISO3 code
         iso3_code = cc.convert(country_name, to='ISO3')
