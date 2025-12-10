@@ -4,6 +4,7 @@ Booking data transformation functions
 
 from typing import Dict, Any, List
 from datetime import datetime
+import calendar
 from app.helpers import get_country_iso3
 
 
@@ -93,7 +94,7 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         # Convert date format from MM/DD/YYYY to YYYY-MM-DD
         passenger["DateOfBirth"] = _convert_date_format(custom_fields.get("Date of Birth - Year", ""), custom_fields.get("Date of Birth - Month", ""), custom_fields.get("Date of Birth - Day", ""))
         
-        # Map gender
+       # Map gender
         gender_display = custom_fields.get("Passenger Sex", "")
         passenger["Gender"] = "M" if "Male" in gender_display else "F"
         
@@ -128,14 +129,52 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
 def _convert_date_format(year: str, month: str, day: str) -> str:
     """
     Convert date format to YYYY-MM-DD
+    Handles month as either integer string or month name (e.g., "January", "February")
     """
     if not year or not month or not day:
         return ""
     
     try:
-        d = datetime(int(year), int(month), int(day))
+        # Convert month name to number if needed
+        month_num = _parse_month(month)
+        if month_num is None:
+            return ""
+        
+        d = datetime(int(year), month_num, int(day))
         return d.strftime("%Y-%m-%d")
     except Exception as e:
         print(f"Error converting date format: {str(e)}")
         return ""
+
+
+def _parse_month(month: str) -> int:
+    """
+    Parse month string to integer (1-12)
+    Handles both numeric strings and month names (e.g., "January", "February")
+    """
+    if not month:
+        return None
+    
+    month = month.strip()
+    
+    # Try to parse as integer first
+    try:
+        month_num = int(month)
+        if 1 <= month_num <= 12:
+            return month_num
+    except ValueError:
+        pass
+    
+    # Try to match month name (case-insensitive)
+    month_lower = month.lower()
+    for i, month_name in enumerate(calendar.month_name[1:], start=1):
+        if month_lower == month_name.lower():
+            return i
+    
+    # Try abbreviated month names (Jan, Feb, etc.)
+    for i, month_abbr in enumerate(calendar.month_abbr[1:], start=1):
+        if month_lower == month_abbr.lower():
+            return i
+    
+    return None
 
