@@ -117,18 +117,92 @@ async def get_flight_identifiers_from_api(booking_data: Dict[str, Any]) -> List[
 def determine_flight_directions(existing_flights: List[int], current_flights: List[int], 
                               existing_booking: Dict[str, Any], current_booking: Dict[str, Any]) -> tuple[List[int], List[int]]:
     """
-    Determine which flights are depart and which are return based on order
-    First request is depart flight, second request is return flight
+    Determine which flights are depart and which are return based on flight dates
+    Flight with earlier date = depart flight
+    Flight with later date = return flight
     """
-    # In round trip bookings:
-    # First request (existing_booking) = depart flight
-    # Second request (current_booking) = return flight
+    # Extract flight dates from both bookings
+    existing_date_str = existing_booking.get("availability", {}).get("start_at", "")
+    current_date_str = current_booking.get("availability", {}).get("start_at", "")
     
-    log_debug("Determining flight directions: First request (existing) = Depart, Second request (current) = Return")
-    
-    # So existing_flights should be depart_flights, current_flights should be return_flights
-    depart_flights = existing_flights  # First request is depart
-    return_flights = current_flights  # Second request is return
+    try:
+        # Parse dates for comparison
+        existing_date = None
+        current_date = None
+        
+        if existing_date_str:
+            # Fix timezone format if needed
+            if not existing_date_str.endswith('Z'):
+                timezone_pattern = r'([+-])(\d{2})(\d{2})$'
+                match = re.search(timezone_pattern, existing_date_str)
+                if match:
+                    sign, hours, minutes = match.groups()
+                    existing_date_str = existing_date_str[:match.start()] + f"{sign}{hours}:{minutes}"
+            existing_date = datetime.fromisoformat(existing_date_str.replace('Z', '+00:00'))
+        
+        if current_date_str:
+            # Fix timezone format if needed
+            if not current_date_str.endswith('Z'):
+                timezone_pattern = r'([+-])(\d{2})(\d{2})$'
+                match = re.search(timezone_pattern, current_date_str)
+                if match:
+                    sign, hours, minutes = match.groups()
+                    current_date_str = current_date_str[:match.start()] + f"{sign}{hours}:{minutes}"
+            current_date = datetime.fromisoformat(current_date_str.replace('Z', '+00:00'))
+        
+        # Compare dates and assign flights accordingly
+        if existing_date and current_date:
+            if existing_date < current_date:
+                # Existing booking has earlier date -> depart flight
+                # Current booking has later date -> return flight
+                depart_flights = existing_flights
+                return_flights = current_flights
+                log_debug(
+                    "Determining flight directions by date",
+                    {
+                        "existing_date": existing_date.isoformat(),
+                        "current_date": current_date.isoformat(),
+                        "depart_flights": depart_flights,
+                        "return_flights": return_flights
+                    }
+                )
+            else:
+                # Current booking has earlier date -> depart flight
+                # Existing booking has later date -> return flight
+                depart_flights = current_flights
+                return_flights = existing_flights
+                log_debug(
+                    "Determining flight directions by date",
+                    {
+                        "existing_date": existing_date.isoformat(),
+                        "current_date": current_date.isoformat(),
+                        "depart_flights": depart_flights,
+                        "return_flights": return_flights
+                    }
+                )
+        else:
+            # Fallback to order-based logic if dates can't be parsed
+            log_warning(
+                "Could not parse flight dates, using order-based logic",
+                {
+                    "existing_date_str": existing_date_str,
+                    "current_date_str": current_date_str
+                }
+            )
+            depart_flights = existing_flights  # First request is depart
+            return_flights = current_flights  # Second request is return
+            
+    except Exception as e:
+        # Fallback to order-based logic if date parsing fails
+        log_warning(
+            f"Error parsing flight dates: {str(e)}, using order-based logic",
+            {
+                "existing_date_str": existing_date_str,
+                "current_date_str": current_date_str
+            }
+        )
+        depart_flights = existing_flights  # First request is depart
+        return_flights = current_flights  # Second request is return
     
     return depart_flights, return_flights
 
