@@ -127,8 +127,8 @@ def determine_flight_directions(existing_flights: List[int], current_flights: Li
     log_debug("Determining flight directions: First request (existing) = Depart, Second request (current) = Return")
     
     # So existing_flights should be depart_flights, current_flights should be return_flights
-    depart_flights = existing_flights  # First request is depart
-    return_flights = current_flights  # Second request is return
+    depart_flights = current_flights  # First request is depart
+    return_flights = existing_flights  # Second request is return
     
     return depart_flights, return_flights
 
