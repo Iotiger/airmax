@@ -68,12 +68,11 @@ def log_to_json(
     if error:
         log_entry["error"] = error
     
-    # Print full log entry to console
-    print(f"\n[{timestamp}] [{level}] {message}")
-    if context:
-        print(f"Context: {json.dumps(log_entry.get('context', context), indent=2, ensure_ascii=False)}")
-    if error:
-        print(f"Error: {error}")
+    # Print minimal log entry to console (only for ERROR and WARNING)
+    if level in ["ERROR", "WARNING"]:
+        print(f"[{level}] {message}")
+        if error:
+            print(f"  Error: {error}")
     
     # Append to JSON file (one JSON object per line - JSONL format)
     try:
@@ -101,33 +100,25 @@ def log_warning(message: str, context: Optional[Dict[str, Any]] = None):
 
 
 def log_debug(message: str, context: Optional[Dict[str, Any]] = None):
-    """Log debug message"""
-    log_to_json("DEBUG", message, context)
+    """Log debug message (disabled to reduce log size)"""
+    # Debug logging disabled to reduce log file size
+    pass
 
 
 def log_webhook_request(request_data: Dict[str, Any], client_ip: Optional[str] = None, url: Optional[str] = None):
-    """Log webhook request"""
-    context = {
-        "client_ip": client_ip,
-        "url": str(url) if url else None,
-        "request_data": request_data
-    }
-    log_info("Webhook request received", context)
+    """Log webhook request (minimal logging)"""
+    # Only log minimal info to reduce log size
+    booking_pk = request_data.get("booking", {}).get("pk", None)
+    log_info("Webhook received", {"client_ip": client_ip, "booking_pk": booking_pk})
 
 
 def log_api_request(api_name: str, url: str, payload: Dict[str, Any], response: Optional[Dict[str, Any]] = None, error: Optional[str] = None):
-    """Log API request/response"""
-    context = {
-        "api_name": api_name,
-        "url": url,
-        "payload": payload,
-        "response": response
-    }
-    
+    """Log API request/response (minimal logging)"""
     if error:
-        log_error(f"API request failed: {api_name}", error, context)
+        log_error(f"API request failed: {api_name}", error, {"url": url})
     else:
-        log_info(f"API request successful: {api_name}", context)
+        # Only log success without full payload/response to reduce log size
+        log_info(f"API request successful: {api_name}", {"url": url})
 
 
 def save_webhook_request_body(webhook_data: Dict[str, Any], client_ip: Optional[str] = None, url: Optional[str] = None):
@@ -153,11 +144,9 @@ def save_webhook_request_body(webhook_data: Dict[str, Any], client_ip: Optional[
     # Convert datetime objects to ISO strings for JSON serialization
     webhook_entry["webhook_data"] = convert_datetime_to_iso(webhook_data)
     
-    # Print webhook entry to console
-    print(f"\n[WEBHOOK REQUEST BODY] [{timestamp}]")
-    print(f"Client IP: {client_ip}")
-    print(f"URL: {url}")
-    print(f"Webhook Data: {json.dumps(webhook_entry['webhook_data'], indent=2, ensure_ascii=False)}")
+    # Print minimal webhook info to console (only summary)
+    booking_pk = webhook_data.get("booking", {}).get("pk", "N/A")
+    print(f"[WEBHOOK] {timestamp} | IP: {client_ip} | Booking PK: {booking_pk}")
     
     # Append to JSON file (one JSON object per line - JSONL format)
     try:

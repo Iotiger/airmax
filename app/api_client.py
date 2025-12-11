@@ -25,7 +25,7 @@ async def send_to_makersuite_api(transformed_data: Dict[str, Any]) -> Dict[str, 
     }
     
     try:
-        log_info("Sending request to MakerSuite API", {"url": MAKERSUITE_API_URL, "payload": transformed_data})
+        log_info("Sending request to MakerSuite API")
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -35,7 +35,6 @@ async def send_to_makersuite_api(transformed_data: Dict[str, Any]) -> Dict[str, 
                 timeout=30.0
             )
             
-            log_info(f"MakerSuite API Response Status: {response.status_code}")
             
             if response.status_code == 200:
                 response_data = response.json()
@@ -73,7 +72,7 @@ async def search_flights(search_payload: Dict[str, Any]) -> Dict[str, Any]:
     url = f"{AIRMAX_API_BASE_URL}{AIRMAX_FLIGHT_SEARCH_ENDPOINT}"
     
     try:
-        log_info("Sending flight search request", {"url": url, "payload": search_payload})
+        log_info("Sending flight search request")
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -83,7 +82,6 @@ async def search_flights(search_payload: Dict[str, Any]) -> Dict[str, Any]:
                 timeout=30.0
             )
             
-            log_info(f"Flight Search API Response Status: {response.status_code}")
             
             if response.status_code == 200:
                 response_data = response.json()

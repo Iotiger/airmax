@@ -48,12 +48,12 @@ async def receive_booking_webhook(request: Request):
     except json.JSONDecodeError:
         webhook_data = {"raw_body": body.decode('utf-8')}
     
-    # Save webhook request body to JSON file
-    save_webhook_request_body(
-        webhook_data=webhook_data,
-        client_ip=request.client.host if request.client else None,
-        url=request.url
-    )
+    # Save webhook request body to JSON file (disabled to reduce log size)
+    # save_webhook_request_body(
+    #     webhook_data=webhook_data,
+    #     client_ip=request.client.host if request.client else None,
+    #     url=request.url
+    # )
     
     # Log webhook request
     _log_webhook_request(request, webhook_data)
@@ -61,7 +61,6 @@ async def receive_booking_webhook(request: Request):
     # Process booking data if it contains booking information
     if "booking" in webhook_data:
         try:
-            log_info("Processing booking data")
             
             booking_data = webhook_data["booking"]
             
@@ -106,7 +105,6 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
         # Check if we already have a booking for this order BEFORE any cleanup
         # (cleanup should only happen when storing new bookings, not when checking)
         if has_round_trip_booking(order_id):
-            log_info(f"Found existing booking for {order_id}, combining flights")
             
             # Get the existing booking data
             existing_booking_info = get_round_trip_booking(order_id)
@@ -145,11 +143,8 @@ async def _process_round_trip_booking(booking_data: Dict[str, Any]) -> Dict[str,
                 transformed_data = transform_booking_data(
                     combined_booking_data, depart_flights, return_flights
                 )
-                log_info(f"Round trip transformation completed: {order_id}")
-                
                 # Release lock before API call (lock released when exiting async with)
                 # Send to MakerSuite API
-                log_info(f"Sending round trip booking to API: {order_id}")
                 api_result = await send_to_makersuite_api(transformed_data)
                 
                 if api_result["success"]:
@@ -251,17 +246,13 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
             "duplicate": True
         }
     
-    log_info("Processing single trip booking")
     
     # Get flight identifiers from API
     depart_flights = await get_flight_identifiers_from_api(booking_data)
     
     # Transform the booking data
     transformed_data = transform_booking_data(booking_data, depart_flights=depart_flights)
-    log_info("Single trip transformation completed")
-    
     # Send to MakerSuite API
-    log_info("Sending single trip booking to API")
     api_result = await send_to_makersuite_api(transformed_data)
     
     if api_result["success"]:
@@ -298,9 +289,7 @@ async def _process_single_trip_booking(booking_data: Dict[str, Any]) -> Dict[str
 
 def _log_webhook_request(request: Request, webhook_data: Dict[str, Any]):
     """Log webhook request details"""
-    print(f"\n[WEBHOOK] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | {request.client.host if request.client else 'unknown'} | {request.url}")
-    
-    # Log to JSON file
+    # Log to JSON file (minimal logging)
     log_webhook_request(
         request_data=webhook_data,
         client_ip=request.client.host if request.client else None,
