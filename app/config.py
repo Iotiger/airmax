@@ -11,11 +11,11 @@ env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # MakerSuite API configuration
-MAKERSUITE_API_URL = "https://testapi.makerssuite.com/api/Book/CreateBooking"
-MAKERSUITE_API_KEY = "AD3236C8-E7E8-4D81-A73A-E389F4ADE35B"
+MAKERSUITE_API_URL = "https://api.makerssuite.com/api/Book/CreateBooking"
+MAKERSUITE_API_KEY = "AE52969F-490C-4923-81CB-6BFE27E8B7C2"
 
 # Airmax API configuration
-AIRMAX_API_BASE_URL = "https://testapi.makerssuite.com"
+AIRMAX_API_BASE_URL = "https://api.makerssuite.com"
 AIRMAX_FLIGHT_SEARCH_ENDPOINT = (
     "/api/FlightSearch/GetOneWayFlightsForDateRange"
 )
