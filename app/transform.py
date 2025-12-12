@@ -112,7 +112,7 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         passenger["DocumentCountry"] = get_country_iso3(citizenship)
         
         # Weight
-        passenger["Weight"] = int(custom_fields.get("Passenger Weight", 0)) if custom_fields.get("Passenger Weight", "").isdigit() else 0
+        passenger["Weight"] = int(custom_fields.get("Passenger Weight", 100)) if custom_fields.get("Passenger Weight", "").isdigit() else 100
         passenger["BahamasStay"] = custom_fields.get("Bahamas Hotel", "BHS")  # Default value as specified
         
         # Address information from booking-level custom fields
