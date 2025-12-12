@@ -30,6 +30,7 @@ def convert_datetime_to_iso(obj: Any) -> Any:
 LOG_DIR = Path("logs")
 LOG_FILE = LOG_DIR / "webhook_logs.json"
 WEBHOOK_DATA_FILE = LOG_DIR / "webhook_requests.json"
+AIRMAX_BOOKING_REQUESTS_FILE = LOG_DIR / "airmax_booking_requests.json"
 
 
 def ensure_log_dir():
@@ -156,4 +157,35 @@ def save_webhook_request_body(webhook_data: Dict[str, Any], client_ip: Optional[
         # Fallback to print if file write fails
         print(f"ERROR: Failed to save webhook request body: {e}")
         print(f"Webhook entry: {webhook_entry}")
+
+
+def save_airmax_booking_request(booking_request_data: Dict[str, Any], url: Optional[str] = None):
+    """
+    Save Airmax API create booking request data to JSON file
+    
+    Args:
+        booking_request_data: The booking request payload sent to Airmax API
+        url: API URL (optional)
+    """
+    ensure_log_dir()
+    
+    timestamp = datetime.now().isoformat()
+    # Create entry with request data
+    request_entry = {
+        "timestamp": timestamp,
+        "url": str(url) if url else None,
+        "request_data": booking_request_data
+    }
+    
+    # Convert datetime objects to ISO strings for JSON serialization
+    request_entry["request_data"] = convert_datetime_to_iso(booking_request_data)
+    
+    # Append to JSON file (one JSON object per line - JSONL format)
+    try:
+        with open(AIRMAX_BOOKING_REQUESTS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(request_entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        # Fallback to print if file write fails
+        print(f"ERROR: Failed to save Airmax booking request: {e}")
+        print(f"Request entry: {request_entry}")
 

@@ -11,7 +11,7 @@ from app.config import (
     AIRMAX_API_BASE_URL,
     AIRMAX_FLIGHT_SEARCH_ENDPOINT
 )
-from app.logger import log_api_request, log_error, log_info
+from app.logger import log_api_request, log_error, log_info, save_airmax_booking_request
 
 
 async def send_to_makersuite_api(transformed_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -26,6 +26,9 @@ async def send_to_makersuite_api(transformed_data: Dict[str, Any]) -> Dict[str, 
     
     try:
         log_info("Sending request to MakerSuite API")
+        
+        # Save booking request data to log file
+        save_airmax_booking_request(transformed_data, MAKERSUITE_API_URL)
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
