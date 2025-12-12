@@ -170,6 +170,8 @@ def determine_flight_directions(existing_flights: List[int], current_flights: Li
             )
             depart_flights = existing_flights  # First request is depart
             return_flights = current_flights  # Second request is return
+        
+        return depart_flights, return_flights
             
     except Exception as e:
         # Fallback to order-based logic if date parsing fails
@@ -180,10 +182,9 @@ def determine_flight_directions(existing_flights: List[int], current_flights: Li
                 "current_date_str": current_date_str
             }
         )
-    depart_flights = existing_flights  # First request is depart
-    return_flights = current_flights  # Second request is return
-    
-    return depart_flights, return_flights
+        depart_flights = existing_flights  # First request is depart
+        return_flights = current_flights  # Second request is return
+        return depart_flights, return_flights
 
 
 def get_country_iso3(country_name: str) -> str:
