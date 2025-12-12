@@ -180,8 +180,8 @@ def determine_flight_directions(existing_flights: List[int], current_flights: Li
                 "current_date_str": current_date_str
             }
         )
-        depart_flights = existing_flights  # First request is depart
-        return_flights = current_flights  # Second request is return
+    depart_flights = existing_flights  # First request is depart
+    return_flights = current_flights  # Second request is return
     
     return depart_flights, return_flights
 

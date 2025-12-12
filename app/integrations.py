@@ -24,8 +24,7 @@ from app.storage import (
 from app.transform import transform_booking_data
 from app.api_client import send_to_makersuite_api
 from app.logger import (
-    log_info, log_error, log_warning, log_webhook_request,
-    save_webhook_request_body
+    log_info, log_error, log_warning, log_webhook_request
 )
 from app.slack_notifier import (
     notify_booking_success, notify_booking_error, notify_booking_warning
@@ -63,6 +62,31 @@ async def receive_booking_webhook(request: Request):
         try:
             
             booking_data = webhook_data["booking"]
+            
+            # Check if affiliate_company name contains "Airmax" - ignore these bookings
+            affiliate_company = booking_data.get("affiliate_company")
+            if affiliate_company:
+                affiliate_name = affiliate_company.get("name", "").strip()
+                if affiliate_name and "Airmax" in affiliate_name:
+                    booking_pk = booking_data.get("pk")
+                    order_id = get_order_display_id(booking_data)
+                    
+                    log_info(f"Ignoring booking {booking_pk} - affiliate is Airmax (affiliate: {affiliate_name})")
+                    
+                    # Send Slack notification
+                    await notify_booking_warning(
+                        message=f"Booking ignored - affiliate is Airmax (affiliate: {affiliate_name})",
+                        booking_data=booking_data,
+                        order_id=order_id,
+                        booking_type="round_trip" if is_round_trip(booking_data) else "single_trip"
+                    )
+                    
+                    return {
+                        "message": "Booking ignored - affiliate is Airmax",
+                        "timestamp": datetime.now().isoformat(),
+                        "ignored": True,
+                        "affiliate_name": affiliate_name
+                    }
             
             # Check if this is a round trip booking
             if is_round_trip(booking_data):
