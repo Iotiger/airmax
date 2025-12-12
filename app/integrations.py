@@ -67,7 +67,7 @@ async def receive_booking_webhook(request: Request):
             affiliate_company = booking_data.get("affiliate_company")
             if affiliate_company:
                 affiliate_name = affiliate_company.get("name", "").strip()
-                if affiliate_name and "Airmax" in affiliate_name:
+                if affiliate_name and "AIRMAX" in affiliate_name:
                     booking_pk = booking_data.get("pk")
                     order_id = get_order_display_id(booking_data)
                     
