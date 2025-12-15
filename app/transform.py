@@ -5,7 +5,7 @@ Booking data transformation functions
 from typing import Dict, Any, List
 from datetime import datetime
 import calendar
-from app.helpers import get_country_iso3
+from app.helpers import get_country_iso3, clean_name
 
 
 def transform_booking_data(booking_data: Dict[str, Any], depart_flights: List[int] = None, return_flights: List[int] = None) -> Dict[str, Any]:
@@ -88,8 +88,9 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         custom_fields = {field["name"]: field["display_value"] for field in customer.get("custom_field_values", [])}
         
         # Map FareHarbor fields to MakerSuite format
-        passenger["FirstName"] = custom_fields.get("Passenger First Name", "")
-        passenger["LastName"] = custom_fields.get("Passenger Last Name", "")
+        # Clean names to remove special characters (hyphens, apostrophes, slashes, etc.)
+        passenger["FirstName"] = clean_name(custom_fields.get("Passenger First Name", ""))
+        passenger["LastName"] = clean_name(custom_fields.get("Passenger Last Name", ""))
         
         # Convert date format from MM/DD/YYYY to YYYY-MM-DD
         passenger["DateOfBirth"] = _convert_date_format(custom_fields.get("Date of Birth - Year", ""), custom_fields.get("Date of Birth - Month", ""), custom_fields.get("Date of Birth - Day", ""))

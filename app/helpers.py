@@ -214,6 +214,22 @@ def get_country_iso3(country_name: str) -> str:
         return country_name
 
 
+def clean_name(name: str) -> str:
+    """
+    Remove all special characters from a name, keeping only letters (A-Z, a-z).
+    Examples:
+        D'Agostino -> DAgostino
+        Carter-Bowers -> CarterBowers
+        O'Brien -> OBrien
+    """
+    if not name:
+        return ""
+    
+    # Remove all non-letter characters, keep only A-Z and a-z
+    cleaned = re.sub(r'[^A-Za-z]', '', name)
+    return cleaned
+
+
 def get_flight_direction(booking_data: Dict[str, Any]) -> str:
     """
     Determine if a flight is depart or return based on the availability item name
