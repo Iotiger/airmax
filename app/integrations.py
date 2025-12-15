@@ -24,7 +24,8 @@ from app.storage import (
 from app.transform import transform_booking_data
 from app.api_client import send_to_makersuite_api
 from app.logger import (
-    log_info, log_error, log_warning, log_webhook_request
+    log_info, log_error, log_warning, log_webhook_request,
+    save_webhook_request_body
 )
 from app.slack_notifier import (
     notify_booking_success, notify_booking_error, notify_booking_warning
@@ -47,12 +48,12 @@ async def receive_booking_webhook(request: Request):
     except json.JSONDecodeError:
         webhook_data = {"raw_body": body.decode('utf-8')}
     
-    # Save webhook request body to JSON file (disabled to reduce log size)
-    # save_webhook_request_body(
-    #     webhook_data=webhook_data,
-    #     client_ip=request.client.host if request.client else None,
-    #     url=request.url
-    # )
+    # Save webhook request body to JSON file
+    save_webhook_request_body(
+        webhook_data=webhook_data,
+        client_ip=request.client.host if request.client else None,
+        url=request.url
+    )
     
     # Log webhook request
     _log_webhook_request(request, webhook_data)
