@@ -230,6 +230,22 @@ def clean_name(name: str) -> str:
     return cleaned
 
 
+def clean_phone(phone: str) -> str:
+    """
+    Remove all special characters from a phone number, keeping only digits.
+    Examples:
+        +34(241)-335-39-39 -> 342413353939
+        (555) 123-4567 -> 5551234567
+        +1-800-555-1234 -> 18005551234
+    """
+    if not phone:
+        return ""
+    
+    # Remove all non-digit characters, keep only 0-9
+    cleaned = re.sub(r'[^\d]', '', phone)
+    return cleaned
+
+
 def get_flight_direction(booking_data: Dict[str, Any]) -> str:
     """
     Determine if a flight is depart or return based on the availability item name
