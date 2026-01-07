@@ -246,6 +246,22 @@ def clean_phone(phone: str) -> str:
     return cleaned
 
 
+def clean_alphanumeric(value: str) -> str:
+    """
+    Remove all spaces and special characters, keeping only letters and numbers.
+    Examples:
+        555 555 987 -> 555555987
+        AB 123 CD -> AB123CD
+        A1-B2 C3 -> A1B2C3
+    """
+    if not value:
+        return ""
+    
+    # Remove all non-alphanumeric characters, keep only A-Z, a-z, and 0-9
+    cleaned = re.sub(r'[^A-Za-z0-9]', '', value)
+    return cleaned
+
+
 def get_flight_direction(booking_data: Dict[str, Any]) -> str:
     """
     Determine if a flight is depart or return based on the availability item name

@@ -5,7 +5,7 @@ Booking data transformation functions
 from typing import Dict, Any, List
 from datetime import datetime
 import calendar
-from app.helpers import get_country_iso3, clean_name, clean_phone
+from app.helpers import get_country_iso3, clean_name, clean_phone, clean_alphanumeric
 
 
 def transform_booking_data(booking_data: Dict[str, Any], depart_flights: List[int] = None, return_flights: List[int] = None) -> Dict[str, Any]:
@@ -104,7 +104,7 @@ def _transform_passengers(booking_data: Dict[str, Any], booking_custom_fields: D
         passenger["Phone"] = clean_phone(booking_data.get("contact", {}).get("phone", ""))
         
         # Document information
-        passenger["DocumentNumber"] = custom_fields.get("Passport Number", "")
+        passenger["DocumentNumber"] = clean_alphanumeric(custom_fields.get("Passport Number", ""))
         passenger["DocumentType"] = "P"  # P for Passport
         passenger["DocumentExpiry"] = _convert_date_format(custom_fields.get("Passport Expiration Date - Year", ""), custom_fields.get("Passport Expiration Date - Month", ""), custom_fields.get("Passport Expiration Date - Day", ""))
         
